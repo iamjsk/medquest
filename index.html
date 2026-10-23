@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>의학용어 퀘스트</title>
+<meta name="theme-color" content="#0A0F24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="메디퀘스트">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=Lexend:wght@500;700;800&display=swap">
+<style>
+/* Layout: one-column game shell, monitor-screen night palette; ECG trace as the recurring motif */
+:root{
+  --bg:#0A0F24; --surface:#131A3A; --surface2:#1B2452; --line:#2A3570;
+  --fg:#EEF1FF; --muted:#8C96C8;
+  --cyan:#33E1F2; --pink:#FF4F8B; --gold:#FFC857; --good:#3EE58A; --bad:#FF5C6A;
+  --f-display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-term:"Lexend","Avenir Next","Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 110px;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+.term{font-family:var(--f-term);font-weight:700;letter-spacing:-.01em}
+.muted{color:var(--muted)}
+.label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.num{font-variant-numeric:tabular-nums}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:4px}
+.top h1{font-size:24px}
+.top h1 span{color:var(--cyan)}
+.lvl{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);padding:6px 12px 6px 6px;border-radius:999px}
+.lvl b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--pink));color:var(--bg);font-family:var(--f-term);font-size:14px}
+.ecg{width:100%;height:44px;display:block}
+.ecg path{fill:none;stroke:var(--cyan);stroke-width:2;stroke-linejoin:round;stroke-dasharray:600;stroke-dashoffset:600;animation:trace 2.4s linear infinite;filter:drop-shadow(0 0 4px var(--cyan))}
+@keyframes trace{to{stroke-dashoffset:-600}}
+
+/* stat strip */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .v{font-family:var(--f-term);font-weight:800;font-size:24px;line-height:1.1}
+.stat .k{font-size:12px;color:var(--muted)}
+.flame{color:var(--gold)}
+.xpbar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.xpbar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--pink));border-radius:99px;transition:width .6s}
+
+/* Rx mission card */
+.rx{position:relative;border-radius:22px;padding:20px;background:
+  radial-gradient(120% 90% at 100% 0%,rgba(255,79,139,.28),transparent 60%),
+  radial-gradient(100% 80% at 0% 100%,rgba(51,225,242,.22),transparent 60%),var(--surface2);border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;gap:14px}
+.rx .rxmark{position:absolute;right:16px;top:8px;font-family:var(--f-term);font-weight:800;font-size:64px;color:rgba(255,255,255,.06);line-height:1}
+.rx h2{font-size:26px}
+.rx .lines{display:flex;flex-direction:column;gap:6px}
+.rx .ln{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px dashed var(--line);padding-bottom:6px}
+.rx .ln b{font-family:var(--f-term);font-size:18px}
+.done-stamp{align-self:flex-start;font-family:var(--f-display);color:var(--good);border:2px solid var(--good);border-radius:8px;padding:2px 10px;transform:rotate(-4deg)}
+.big{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:16px;font-family:var(--f-display);font-size:20px;background:linear-gradient(135deg,var(--cyan),#5B8CFF);color:#06122A;box-shadow:0 6px 0 #1E3C8C,0 10px 24px rgba(51,225,242,.25);transition:transform .08s,box-shadow .08s}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #1E3C8C}
+.big.alt{background:var(--surface);color:var(--fg);box-shadow:0 5px 0 #070B1C;border:1px solid var(--line)}
+.big.pink{background:linear-gradient(135deg,var(--pink),#FF8A5B);color:#2A0612;box-shadow:0 6px 0 #8C1E44}
+.big[disabled]{opacity:.45;pointer-events:none}
+
+.card{background:var(--surface);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:12px}
+.row>div{min-width:0;flex:1}
+.banner{border-radius:14px;padding:12px 14px;background:rgba(255,200,87,.12);border:1px solid rgba(255,200,87,.4);font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banner button{color:var(--gold);font-weight:700;white-space:nowrap}
+
+/* boss card */
+.bosscard{display:flex;gap:14px;align-items:center}
+.bosscard svg{flex:none}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--surface2);color:var(--muted)}
+.pill.on{background:rgba(255,79,139,.18);color:var(--pink)}
+.pill.ok{background:rgba(62,229,138,.15);color:var(--good)}
+
+/* milestones */
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-family:var(--f-term);font-weight:800;font-size:14px;background:var(--surface2);color:var(--muted);border:1px dashed var(--line)}
+.badge.got{background:linear-gradient(135deg,var(--gold),#FF9A3D);color:#2A1600;border:0;box-shadow:0 0 16px rgba(255,200,87,.35)}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,15,36,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:calc(6px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.nav div{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.nav button{padding:10px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted)}
+.nav button svg{width:24px;height:24px}
+.nav button[aria-current="page"]{color:var(--cyan)}
+
+/* map */
+.world{display:flex;gap:14px;align-items:center;text-align:left;width:100%;background:var(--surface);border-radius:18px;padding:14px;border:1px solid transparent}
+.world.locked{opacity:.45}
+.world.current{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(51,225,242,.12)}
+.orb{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-size:20px;color:#08102A}
+.bar{height:6px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;border-radius:99px}
+.stage-h{margin-top:6px}
+.wlist{display:flex;flex-direction:column;gap:6px}
+.witem{display:flex;justify-content:space-between;gap:10px;align-items:center;background:var(--surface);border-radius:12px;padding:10px 12px}
+.witem .term{font-size:16px}
+.dots{display:flex;gap:3px;flex:none}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--surface2)}
+.dots i.f{background:var(--cyan)}
+
+/* settings */
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg button{padding:12px 0;border-radius:12px;background:var(--surface2);font-family:var(--f-term);font-weight:700;font-size:18px}
+.seg button[aria-pressed="true"]{background:var(--cyan);color:#06122A}
+textarea{width:100%;min-height:84px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:10px;font:12px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+.btn{padding:11px 14px;border-radius:12px;background:var(--surface2);font-weight:700}
+.btn.warn{color:var(--bad)}
+.toggle{width:52px;height:30px;border-radius:99px;background:var(--surface2);position:relative;flex:none}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--muted);transition:transform .2s}
+.toggle[aria-pressed="true"]{background:var(--cyan)}
+.toggle[aria-pressed="true"]::after{transform:translateX(22px);background:#06122A}
+ol.how{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+
+/* overlay (session / boss / world) */
+.ov{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.ov-in{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;gap:16px;padding-top:calc(12px + env(safe-area-inset-top,0px));padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ov-top{display:flex;align-items:center;gap:12px}
+.x{width:40px;height:40px;border-radius:12px;background:var(--surface);display:grid;place-items:center;flex:none}
+.prog{flex:1;height:12px;border-radius:99px;background:var(--surface);overflow:hidden}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--good),var(--cyan));border-radius:99px;transition:width .35s}
+.combo{font-family:var(--f-term);font-weight:800;color:var(--gold);min-width:56px;text-align:right}
+.combo.pop{animation:pop .35s}
+@keyframes pop{50%{transform:scale(1.45)}}
+
+/* learn card */
+.learn{border-radius:24px;padding:22px 20px;background:linear-gradient(160deg,var(--surface2),var(--surface));border:1px solid var(--line);display:flex;flex-direction:column;gap:14px;animation:flipin .45s cubic-bezier(.2,.8,.3,1.2)}
+@keyframes flipin{from{transform:perspective(800px) rotateY(-70deg);opacity:0}}
+.newtag{align-self:flex-start;font-size:12px;font-weight:700;color:var(--bg);background:var(--pink);padding:3px 10px;border-radius:99px}
+.bigterm{font-size:clamp(28px,9vw,40px);line-height:1.1;overflow-wrap:anywhere}
+.pron{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pron span{font-size:18px;font-weight:700;color:var(--cyan)}
+.spk{width:44px;height:44px;border-radius:50%;background:rgba(51,225,242,.14);color:var(--cyan);display:grid;place-items:center;flex:none}
+.spk svg{width:22px;height:22px}
+.spk.sm{width:34px;height:34px}.spk.sm svg{width:17px;height:17px}
+.meaning{font-size:22px;font-weight:700}
+.parts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{display:inline-flex;flex-direction:column;align-items:center;padding:6px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.chip b{font-family:var(--f-term);font-size:16px}
+.chip small{font-size:11px;color:var(--muted)}
+.chip.c0 b{color:var(--cyan)}.chip.c1 b{color:var(--pink)}.chip.c2 b{color:var(--gold)}.chip.c3 b{color:var(--good)}
+.chip.join{padding:6px 4px;border:0;background:none}
+.plus{color:var(--muted)}
+.ex{display:flex;gap:10px;align-items:center;background:var(--bg);border-radius:12px;padding:10px 12px}
+.ex div{min-width:0}
+
+/* question */
+.qbox{display:flex;flex-direction:column;gap:14px}
+.qprompt{border-radius:22px;padding:22px 18px;background:var(--surface);text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+.qprompt .bigterm{font-size:clamp(26px,8vw,36px)}
+.qtype{font-size:13px;color:var(--muted)}
+.opts{display:grid;gap:10px}
+.opt{width:100%;text-align:left;padding:15px 16px;border-radius:16px;background:var(--surface);border:2px solid var(--line);font-size:17px;font-weight:500;box-shadow:0 4px 0 #070B1C;transition:transform .08s}
+.opt:active{transform:translateY(3px);box-shadow:0 1px 0 #070B1C}
+.opt.term{font-size:18px}
+.opt.right{border-color:var(--good);background:rgba(62,229,138,.14);animation:pop .3s}
+.opt.wrong{border-color:var(--bad);background:rgba(255,92,106,.14);animation:shake .35s}
+.opt[disabled]{pointer-events:none}
+@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+.spell{display:flex;gap:8px}
+.spell input{flex:1;min-width:0;padding:14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font:700 20px var(--f-term)}
+.spell input.right{border-color:var(--good)}.spell input.wrong{border-color:var(--bad);animation:shake .35s}
+.fb{border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;animation:up .25s}
+.fb.bad{background:rgba(255,92,106,.1);border:1px solid rgba(255,92,106,.4)}
+.fb.good{background:rgba(62,229,138,.1);border:1px solid rgba(62,229,138,.4)}
+@keyframes up{from{transform:translateY(10px);opacity:0}}
+.flash{position:fixed;inset:0;pointer-events:none;z-index:60;animation:fl .4s forwards}
+@keyframes fl{from{opacity:.35}to{opacity:0}}
+
+/* result */
+.result{text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center;padding-top:24px}
+.result h2{font-size:34px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+
+/* boss */
+.arena{position:relative;border-radius:24px;padding:18px;background:radial-gradient(80% 70% at 50% 40%,rgba(255,79,139,.25),transparent 70%),var(--surface);display:flex;flex-direction:column;align-items:center;gap:8px}
+.bossname{font-family:var(--f-display);font-size:20px}
+.hp{width:100%;height:14px;border-radius:99px;background:var(--bg);overflow:hidden;border:1px solid var(--line)}
+.hp i{display:block;height:100%;background:linear-gradient(90deg,var(--bad),var(--pink));transition:width .4s}
+.hearts{display:flex;gap:4px;color:var(--pink)}
+.hearts svg{width:22px;height:22px}
+.hearts .lost{color:var(--surface2)}
+.bossart{animation:bob 2.2s ease-in-out infinite}
+.bossart.hit{animation:hit .4s}
+@keyframes bob{50%{transform:translateY(-6px)}}
+@keyframes hit{20%{transform:translateX(-10px) rotate(-6deg);filter:brightness(2)}60%{transform:translateX(8px) rotate(4deg)}}
+.dmg{position:absolute;top:30%;left:50%;font-family:var(--f-term);font-weight:800;font-size:30px;color:var(--gold);animation:dmg .8s forwards;pointer-events:none}
+@keyframes dmg{to{transform:translate(-50%,-50px);opacity:0}}
+
+.toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:80;background:var(--surface2);border:1px solid var(--line);padding:10px 16px;border-radius:14px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:up .25s;max-width:calc(100% - 32px);text-align:center}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:70}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<nav class="nav" aria-label="메뉴"><div>
+  <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-5 4 10 3-7 2 2h5"/></svg>오늘</button>
+  <button data-tab="map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>월드맵</button>
+  <button data-tab="set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>설정</button>
+</div></nav>
+<div class="ov" id="ov" hidden><div class="ov-in" id="ovin"></div></div>
+<canvas id="fx"></canvas>
+
+<script>
+/* ===================== 단어 데이터 =====================
+   [용어, 한글 발음, 뜻, 조각(조각=뜻|...), 예시·현장 한마디, (선택)읽기용 텍스트] */
+const WORLDS = [
+{id:"pre",stage:"입학 전 워밍업",name:"접두사 던전",tag:"앞",color:"#33E1F2",desc:"단어 맨 앞에 붙는 조각",items:[
+["a-/an-","어 · 언","없음, ~이 아닌","an=없음|emia=혈액 상태","anemia 어니미아 · 빈혈","a, an"],
+["anti-","앤티","반대, 대항","anti=대항|bio=생명|tic=~의","antibiotic 앤티바이오틱 · 항생제"],
+["brady-","브래디","느린","brady=느린|card=심장|ia=상태","bradycardia 브래디카디아 · 서맥"],
+["tachy-","태키","빠른","tachy=빠른|card=심장|ia=상태","tachycardia 태키카디아 · 빈맥"],
+["dys-","디스","어려운, 비정상","dys=어려운|pnea=호흡","dyspnea 디스프니아 · 호흡곤란"],
+["eu-","유","정상, 좋은","eu=정상|pnea=호흡","eupnea 유프니아 · 정상 호흡"],
+["hyper-","하이퍼","과다, 위쪽","hyper=과다|tension=압력","hypertension 하이퍼텐션 · 고혈압"],
+["hypo-","하이포","저하, 아래쪽","hypo=저하|glyc=당|emia=혈액 상태","hypoglycemia 하이포글라이시미아 · 저혈당"],
+["endo-","엔도","안, 내부","endo=안|scopy=보는 검사","endoscopy 엔도스커피 · 내시경 검사"],
+["epi-","에피","위, 바깥","epi=위|derm=피부|is","epidermis 에피더미스 · 표피"],
+["peri-","페리","주위, 둘레","peri=주위|cardi=심장|um","pericardium 페리카디엄 · 심막"],
+["sub-","서브","아래","sub=아래|cutane=피부|ous=~의","subcutaneous 서브큐테이니어스 · 피하(SC)"],
+["inter-","인터","사이","inter=사이|cost=갈비뼈|al=~의","intercostal 인터코스틀 · 늑간"],
+["intra-","인트라","안, 내부","intra=안|ven=정맥|ous=~의","intravenous 인트라비너스 · 정맥 내(IV)"],
+["poly-","폴리","많은","poly=많은|uria=소변 상태","polyuria 폴리유리아 · 다뇨"],
+["olig-","올리그","적은","olig=적은|uria=소변 상태","oliguria 올리구리아 · 핍뇨"],
+["hemi-","헤미","반쪽","hemi=반쪽|plegia=마비","hemiplegia 헤미플리지아 · 편마비"],
+["bi-","바이","둘","bi=둘|later=옆|al=~의","bilateral 바이래터럴 · 양측"],
+["neo-","니오","새로운","neo=새로운|nate=태어남","neonate 니오네이트 · 신생아"],
+["pre-","프리","~ 전","pre=전|operative=수술의","preoperative 프리오퍼러티브 · 수술 전(pre-op)"],
+["post-","포스트","~ 후","post=후|operative=수술의","postoperative 포스트오퍼러티브 · 수술 후(post-op)"],
+["trans-","트랜스","건너, 통과","trans=건너|fusion=부음","transfusion 트랜스퓨전 · 수혈"],
+["dia-","다이아","통과, 완전히","dia=통과|rrhea=흐름","diarrhea 다이어리아 · 설사"],
+["ab-","앱","~에서 멀어짐","ab=멀어짐|duction=끌기","abduction 앱덕션 · 외전(몸에서 멀어지게)"],
+["ad-","애드","~ 쪽으로","ad=쪽으로|duction=끌기","adduction 어덕션 · 내전(몸 쪽으로)"],
+["mal-","맬","나쁜","mal=나쁜|nutrition=영양","malnutrition 맬뉴트리션 · 영양실조"],
+["contra-","콘트라","반대","contra=반대|indication=지시","contraindication 콘트라인디케이션 · 금기"],
+["micro-","마이크로","작은","micro=작은|scope=보는 기구","microscope 마이크로스코프 · 현미경"],
+["macro-","매크로","큰","macro=큰|cyte=세포","macrocyte 매크로사이트 · 대적혈구"],
+["pan-","팬","전체","pan=전체|demic=사람들","pandemic 팬데믹 · 대유행"],
+["ortho-","오쏘","곧은, 바른","orth=곧은|o|pnea=호흡","orthopnea 오쏩니아 · 기좌호흡"]
+]},
+{id:"suf",stage:"입학 전 워밍업",name:"접미사 협곡",tag:"뒤",color:"#FF4F8B",desc:"단어 맨 뒤에 붙는 조각",items:[
+["-itis","아이티스","염증","gastr=위|itis=염증","gastritis 개스트라이티스 · 위염"],
+["-ectomy","엑터미","절제술 (잘라냄)","append=충수|ectomy=절제술","appendectomy 애펜덱터미 · 충수절제술"],
+["-otomy","오터미","절개술 (째기)","trache=기관|otomy=절개술","tracheotomy 트레이키오터미 · 기관절개술"],
+["-ostomy","오스터미","개구술 (구멍 만들기)","col=대장|ostomy=개구술","colostomy 콜로스터미 · 결장루술"],
+["-scopy","스커피","내시경 검사","gastr=위|o|scopy=보는 검사","gastroscopy 개스트로스커피 · 위내시경"],
+["-scope","스코프","보는 기구","stetho=가슴|scope=보는 기구","stethoscope 스테써스코프 · 청진기"],
+["-gram","그램","기록 (결과물)","electr=전기|o|cardi=심장|o|gram=기록","electrocardiogram 일렉트로카디오그램 · 심전도"],
+["-graphy","그래피","기록하는 방법","mamm=유방|o|graphy=기록법","mammography 매모그래피 · 유방촬영술"],
+["-logy","올로지","학문","cardi=심장|o|logy=학문","cardiology 카디올로지 · 심장학"],
+["-algia","앨지아","통증","arthr=관절|algia=통증","arthralgia 아쓰랠지아 · 관절통"],
+["-emia","이미아","혈액 상태","an=없음|emia=혈액 상태","anemia 어니미아 · 빈혈"],
+["-uria","유리아","소변 상태","hemat=혈액|uria=소변 상태","hematuria 히머투리아 · 혈뇨"],
+["-pnea","프니아","호흡","a=없음|pnea=호흡","apnea 앱니아 · 무호흡"],
+["-megaly","메갈리","비대 (커짐)","cardi=심장|o|megaly=비대","cardiomegaly 카디오메갈리 · 심장비대"],
+["-oma","오마","종양, 덩어리","carcin=암|oma=종양","carcinoma 카시노마 · 암종"],
+["-osis","오시스","비정상 상태","cyan=파랑|osis=상태","cyanosis 사이아노시스 · 청색증"],
+["-pathy","퍼시","질병","neur=신경|o|pathy=질병","neuropathy 뉴로퍼시 · 신경병증"],
+["-plasty","플래스티","성형술","rhin=코|o|plasty=성형술","rhinoplasty 라이노플래스티 · 코성형술"],
+["-rrhea","리아","흐름, 분비","rhin=코|o|rrhea=흐름","rhinorrhea 라이노리아 · 콧물"],
+["-rrhage","리지","대량 출혈","hem=혈액|o|rrhage=대량 출혈","hemorrhage 헤모리지 · 출혈"],
+["-penia","피니아","감소, 부족","leuk=흰|o|penia=감소","leukopenia 루코피니아 · 백혈구감소증"],
+["-plegia","플리지아","마비","para=옆|plegia=마비","paraplegia 패러플리지아 · 하반신마비"],
+["-cyte","사이트","세포","erythr=빨강|o|cyte=세포","erythrocyte 이리쓰로사이트 · 적혈구(RBC)"],
+["-genic","제닉","~을 일으키는","carcin=암|o|genic=유발","carcinogenic 카시노제닉 · 발암성의"],
+["-centesis","센티시스","천자 (바늘로 빼내기)","thora=흉부|centesis=천자","thoracentesis 쏘러센티시스 · 흉강천자"],
+["-stasis","스테이시스","멈춤","hem=혈액|o|stasis=멈춤","hemostasis 히모스테이시스 · 지혈"],
+["-ac / -al","액 · 얼","~의 (형용사로 만듦)","cardi=심장|ac=~의","cardiac 카디액 · 심장의","ac, al"],
+["-lysis","리시스","분해, 파괴","hem=혈액|o|lysis=분해","hemolysis 히몰리시스 · 용혈"],
+["-lith","리쓰","돌 (결석)","nephr=신장|o|lith=돌","nephrolith 네프롤리쓰 · 신장결석"]
+]},
+{id:"root",stage:"입학 전 워밍업",name:"어근 정글",tag:"몸",color:"#FFC857",desc:"몸의 부위를 뜻하는 조각",items:[
+["cardi/o","카디오","심장","cardi=심장|o|logy=학문","cardiology 카디올로지 · 심장학"],
+["gastr/o","개스트로","위","gastr=위|itis=염증","gastritis 개스트라이티스 · 위염"],
+["hepat/o","헤파토","간","hepat=간|itis=염증","hepatitis 헤퍼타이티스 · 간염"],
+["nephr/o","네프로","신장 (콩팥)","nephr=신장|itis=염증","nephritis 네프라이티스 · 신장염"],
+["ren/o","리노","신장 (라틴어 계열)","ren=신장|al=~의","renal 리널 · 신장의"],
+["pulmon/o","펄머노","폐 (허파)","pulmon=폐|ary=~의","pulmonary 펄머네리 · 폐의"],
+["pneum/o","뉴모","폐, 공기","pneum=폐|onia=상태","pneumonia 뉴모니아 · 폐렴"],
+["neur/o","뉴로","신경","neur=신경|o|logy=학문","neurology 뉴롤로지 · 신경학"],
+["oste/o","오스티오","뼈","oste=뼈|o|porosis=구멍 상태","osteoporosis 오스티오포로시스 · 골다공증"],
+["arthr/o","아쓰로","관절","arthr=관절|itis=염증","arthritis 아쓰라이티스 · 관절염"],
+["my/o","마이오","근육","my=근육|algia=통증","myalgia 마이앨지아 · 근육통"],
+["dermat/o","더마토","피부","dermat=피부|itis=염증","dermatitis 더머타이티스 · 피부염"],
+["hem/o · hemat/o","히모 · 히마토","혈액 (피)","hemat=혈액|oma=덩어리","hematoma 히머토마 · 혈종(피멍울)"],
+["angi/o","앤지오","혈관","angi=혈관|o|graphy=기록법","angiography 앤지오그래피 · 혈관조영술"],
+["arteri/o","아티리오","동맥","arteri=동맥|o|scler=굳음|osis=상태","arteriosclerosis 아티리오스클러로시스 · 동맥경화증"],
+["ven/o · phleb/o","비노 · 플레보","정맥","phleb=정맥|itis=염증","phlebitis 플리바이티스 · 정맥염"],
+["cyst/o","시스토","방광, 주머니","cyst=방광|itis=염증","cystitis 시스타이티스 · 방광염"],
+["ur/o","유로","소변","ur=소변|o|logy=학문","urology 유롤로지 · 비뇨의학"],
+["enter/o","엔테로","장 (소장)","enter=장|itis=염증","enteritis 엔터라이티스 · 장염"],
+["col/o","콜로","대장 (결장)","col=대장|itis=염증","colitis 콜라이티스 · 대장염"],
+["stomat/o","스토마토","입","stomat=입|itis=염증","stomatitis 스토머타이티스 · 구내염"],
+["gloss/o","글로소","혀","hypo=아래|gloss=혀|al=~의","hypoglossal 하이포글로설 · 혀밑의"],
+["rhin/o","라이노","코","rhin=코|itis=염증","rhinitis 라이나이티스 · 비염"],
+["ot/o","오토","귀","ot=귀|itis=염증","otitis 오타이티스 · 귀의 염증(중이염 등)"],
+["ophthalm/o","옵쌀모","눈","ophthalm=눈|o|logy=학문","ophthalmology 옵쌀몰로지 · 안과학"],
+["encephal/o","엔세팔로","뇌","encephal=뇌|itis=염증","encephalitis 엔세펄라이티스 · 뇌염"],
+["cephal/o","세팔로","머리","cephal=머리|algia=통증","cephalalgia 세펄랠지아 · 두통"],
+["crani/o","크레이니오","두개골","crani=두개골|otomy=절개술","craniotomy 크레이니오터미 · 개두술"],
+["thorac/o","쏘라코","가슴 (흉부)","thorac=흉부|ic=~의","thoracic 쏘래식 · 흉부의"],
+["abdomin/o","앱도미노","배 (복부)","abdomin=복부|al=~의","abdominal 앱도미널 · 복부의"],
+["trache/o","트레이키오","기관 (숨길)","trache=기관|ostomy=개구술","tracheostomy 트레이키오스터미 · 기관절개술"],
+["bronch/o","브롱코","기관지","bronch=기관지|itis=염증","bronchitis 브롱카이티스 · 기관지염"],
+["laryng/o","래링고","후두 (성대 있는 곳)","laryng=후두|itis=염증","laryngitis 래린자이티스 · 후두염"],
+["pharyng/o","패링고","인두 (목구멍)","pharyng=인두|itis=염증","pharyngitis 패린자이티스 · 인두염"],
+["esophag/o","이소파고","식도","esophag=식도|itis=염증","esophagitis 이소퍼자이티스 · 식도염"],
+["cholecyst/o","콜리시스토","담낭 (쓸개)","cholecyst=담낭|ectomy=절제술","cholecystectomy 콜리시스텍터미 · 담낭절제술"],
+["pancreat/o","팬크리아토","췌장","pancreat=췌장|itis=염증","pancreatitis 팬크리어타이티스 · 췌장염"],
+["splen/o","스플리노","비장 (지라)","splen=비장|o|megaly=비대","splenomegaly 스플리노메갈리 · 비장비대"],
+["lymph/o","림포","림프","lymph=림프|oma=종양","lymphoma 림포마 · 림프종"],
+["hyster/o","히스테로","자궁","hyster=자궁|ectomy=절제술","hysterectomy 히스터렉터미 · 자궁절제술"],
+["mamm/o · mast/o","매모 · 매스토","유방","mast=유방|ectomy=절제술","mastectomy 매스텍터미 · 유방절제술"],
+["thyr/o","싸이로","갑상선","thyr=갑상선|oid=~모양","thyroid 싸이로이드 · 갑상선"],
+["aden/o","애디노","샘 (분비선)","aden=샘|oma=종양","adenoma 애더노마 · 선종"],
+["carcin/o","카시노","암","carcin=암|oma=종양","carcinoma 카시노마 · 암종"],
+["erythr/o","이리쓰로","빨강","erythr=빨강|o|cyte=세포","erythrocyte 이리쓰로사이트 · 적혈구"],
+["leuk/o","루코","흰색","leuk=흰|emia=혈액 상태","leukemia 루키미아 · 백혈병"],
+["cyan/o","사이아노","파랑","cyan=파랑|osis=상태","cyanosis 사이아노시스 · 청색증"],
+["glyc/o","글라이코","당 (포도당)","hyper=과다|glyc=당|emia=혈액 상태","hyperglycemia 하이퍼글라이시미아 · 고혈당"],
+["lip/o","리포","지방","lip=지방|oma=종양","lipoma 리포마 · 지방종"]
+]},
+{id:"cv",stage:"1학년",name:"심장 월드",tag:"심",color:"#FF5C6A",desc:"심혈관계",items:[
+["cardiac","카디액","심장의","cardi=심장|ac=~의","cardiac arrest = 심정지"],
+["tachycardia","태키카디아","빈맥 (맥박 100회/분 초과)","tachy=빠른|card=심장|ia=상태","현장에선 줄여서 '태키'"],
+["bradycardia","브래디카디아","서맥 (맥박 60회/분 미만)","brady=느린|card=심장|ia=상태","현장에선 줄여서 '브래디'"],
+["arrhythmia","어리쓰미아","부정맥","a=없음|rrhythm=리듬|ia=상태","심전도 모니터로 확인해요"],
+["hypertension (HTN)","하이퍼텐션","고혈압","hyper=과다|tension=압력","차트에는 HTN으로 적어요"],
+["hypotension","하이포텐션","저혈압","hypo=저하|tension=압력","수술 직후 자주 체크해요"],
+["myocardial infarction (MI)","마이오카디얼 인팍션","심근경색","my=근육|o|cardi=심장|al=~의|infarction=경색","현장에선 'MI(엠아이)'"],
+["angina pectoris","앤자이나 펙토리스","협심증","angina=조이는 통증|pectoris=가슴의","가슴을 쥐어짜는 통증"],
+["atherosclerosis","애써로스클러로시스","죽상경화증","ather=기름 덩어리|o|scler=굳음|osis=상태","혈관 벽에 기름이 쌓여 굳는 병"],
+["thrombus","쓰롬버스","혈전 (핏덩어리)","thromb=덩어리|us","여러 개면 thrombi"],
+["embolism","엠볼리즘","색전증","embol=막는 것|ism=상태","떠다니던 혈전이 혈관을 막음"],
+["aneurysm","애뉴리즘","동맥류","aneurysm=혈관이 부풂","혈관 벽이 풍선처럼 부풂"],
+["edema","이디마","부종 (부기)","edema=부기","눌렀다 떼면 자국이 남으면 함요부종"],
+["electrocardiogram (ECG)","일렉트로카디오그램","심전도","electr=전기|o|cardi=심장|o|gram=기록","EKG라고도 해요"],
+["echocardiography","에코카디오그래피","심장초음파","echo=메아리(초음파)|cardi=심장|o|graphy=기록법","현장에선 줄여서 '에코'"],
+["cardiomegaly","카디오메갈리","심장비대","cardi=심장|o|megaly=비대","흉부 X선에서 발견돼요"],
+["pericarditis","페리카다이티스","심막염","peri=주위|card=심장|itis=염증","심장을 싸는 막의 염증"],
+["endocarditis","엔도카다이티스","심내막염","endo=안|card=심장|itis=염증","심장 안쪽 막의 염증"],
+["heart failure (HF)","하트 페일리어","심부전","heart=심장|failure=기능 상실","CHF = 울혈성 심부전"],
+["CPR","씨피알","심폐소생술","cardio=심장|pulmonary=폐|resuscitation=소생","가슴 압박은 분당 100~120회"],
+["blood pressure (BP)","블러드 프레셔","혈압","blood=피|pressure=압력","120/80 mmHg처럼 기록해요"],
+["pulse (P)","펄스","맥박","pulse=맥박","V/S(활력징후)의 P"],
+["artery","아터리","동맥","arteri=동맥|y","심장에서 나가는 혈관"],
+["vein","베인","정맥","vein=정맥","심장으로 돌아오는 혈관 · IV 주사는 정맥에"],
+["stethoscope","스테써스코프","청진기","stetho=가슴|scope=보는 기구","간호사 필수템"],
+["vital signs (V/S)","바이털 사인즈","활력징후","vital=생명의|signs=징후","혈압 · 맥박 · 호흡 · 체온"]
+]},
+{id:"resp",stage:"1학년",name:"호흡 월드",tag:"폐",color:"#5B8CFF",desc:"호흡기계",items:[
+["apnea","앱니아","무호흡","a=없음|pnea=호흡","수면무호흡 = sleep apnea"],
+["dyspnea","디스프니아","호흡곤란","dys=어려운|pnea=호흡","환자가 숨이 차다고 할 때"],
+["tachypnea","태킵니아","빈호흡 (호흡이 빠름)","tachy=빠른|pnea=호흡","성인 기준 분당 20회 초과"],
+["orthopnea","오쏩니아","기좌호흡","orth=곧은|o|pnea=호흡","누우면 숨차서 앉아야 편함"],
+["pneumonia","뉴모니아","폐렴","pneum=폐|onia=상태","맨 앞 p는 소리 안 나요"],
+["bronchitis","브롱카이티스","기관지염","bronch=기관지|itis=염증",""],
+["asthma","애즈마","천식","asthma=헐떡임","th는 소리 안 나요"],
+["tuberculosis (TB)","튜버큘로시스","결핵","tubercul=작은 결절|osis=상태","현장에선 '티비'"],
+["pneumothorax","뉴모쏘랙스","기흉","pneum=공기|o|thorax=흉곽","가슴 안에 공기가 참"],
+["hemoptysis","히몹티시스","객혈","hem=혈액|o|ptysis=뱉음","기침할 때 피가 섞여 나옴"],
+["sputum","스퓨텀","가래 (객담)","sputum=뱉은 것","객담 검사 = sputum culture"],
+["rhinitis","라이나이티스","비염","rhin=코|itis=염증",""],
+["pharyngitis","패린자이티스","인두염","pharyng=인두|itis=염증","흔히 말하는 목감기"],
+["laryngitis","래린자이티스","후두염","laryng=후두|itis=염증","목이 쉬어요"],
+["tracheostomy","트레이키오스터미","기관절개술","trache=기관|o|stomy=개구술","현장에선 줄여서 '트라키'"],
+["intubation","인튜베이션","기관내 삽관","in=안|tub=관|ation=행위","반대말 extubation = 발관"],
+["oxygen saturation (SpO2)","옥시전 새추레이션","산소포화도","oxygen=산소|saturation=포화","보통 95% 이상이 정상"],
+["COPD","씨오피디","만성폐쇄성폐질환","chronic=만성|obstructive=폐쇄성|pulmonary=폐|disease=질환","흡연이 주원인"],
+["emphysema","엠퍼시마","폐기종","emphysema=공기로 부풂","COPD의 한 종류"],
+["hypoxia","하이폭시아","저산소증","hyp=저하|ox=산소|ia=상태","입술이 파래지면 의심"],
+["respiration (R)","레스퍼레이션","호흡 (호흡수)","re=다시|spir=숨|ation=행위","V/S의 R"],
+["auscultation","오스컬테이션","청진","auscult=듣다|ation=행위","청진기로 몸속 소리 듣기"],
+["nebulizer","네뷸라이저","분무기 (네블라이저)","nebul=안개|izer=기구","약을 안개처럼 만들어 흡입"],
+["thoracentesis","쏘러센티시스","흉강천자","thora=흉부|centesis=천자","흉수를 바늘로 빼냄"],
+["inhalation","인헐레이션","흡입, 들숨","in=안|hal=숨|ation=행위","반대말 exhalation = 날숨"]
+]},
+{id:"gi",stage:"1학년",name:"소화 월드",tag:"위",color:"#3EE58A",desc:"소화기계",items:[
+["gastroenteritis","개스트로엔터라이티스","위장염","gastr=위|o|enter=장|itis=염증","구토 + 설사가 같이 와요"],
+["gastroscopy","개스트로스커피","위내시경","gastr=위|o|scopy=보는 검사",""],
+["hepatitis","헤퍼타이티스","간염","hepat=간|itis=염증","A형 · B형 · C형이 있어요"],
+["cirrhosis","시로시스","간경화","cirrh=누런색|osis=상태","c 다음 i라서 '시'로 읽어요"],
+["jaundice","존디스","황달","jaund=노랑|ice","피부와 눈 흰자가 노래져요"],
+["appendicitis","어펜디사이티스","충수염 (맹장염)","appendic=충수|itis=염증","오른쪽 아랫배 통증"],
+["cholecystitis","콜리시스타이티스","담낭염","chole=담즙|cyst=주머니|itis=염증",""],
+["cholelithiasis","콜리리싸이어시스","담석증","chole=담즙|lith=돌|iasis=상태","쓸개에 돌이 생김"],
+["pancreatitis","팬크리어타이티스","췌장염","pancreat=췌장|itis=염증",""],
+["colitis","콜라이티스","대장염","col=대장|itis=염증",""],
+["colonoscopy","콜로노스커피","대장내시경","colon=대장|o|scopy=보는 검사",""],
+["colostomy","콜로스터미","결장루술 (장루)","col=대장|ostomy=개구술","배에 변이 나오는 구멍을 만듦"],
+["dysphagia","디스페이지아","연하곤란 (삼키기 어려움)","dys=어려운|phag=삼키다|ia=상태","뇌졸중 환자 식사 때 주의"],
+["nausea","노지아","오심 (메스꺼움)","nausea=뱃멀미","N/V = 오심/구토"],
+["vomiting","보미팅","구토","vomit=토하다|ing","N/V의 V"],
+["diarrhea","다이어리아","설사","dia=통과|rrhea=흐름",""],
+["constipation","콘스티페이션","변비","con=함께|stip=꽉 참|ation=상태",""],
+["hematemesis","히머테머시스","토혈 (피를 토함)","hemat=혈액|emesis=구토",""],
+["melena","멜리나","흑색변","melan=검정|a","위장관 출혈 신호"],
+["NPO","엔피오","금식","nil=아무것도|per=통해|os=입","라틴어 nil per os · 수술 전 필수"],
+["ulcer","얼서","궤양","ulcer=헐어서 생긴 상처","gastric ulcer = 위궤양"],
+["hernia","허니아","탈장","hernia=튀어나옴",""],
+["ascites","어사이티즈","복수 (배에 물이 참)","asc=주머니|ites","간경화에서 흔해요"],
+["hepatomegaly","헤파토메갈리","간비대","hepat=간|o|megaly=비대",""],
+["esophagitis","이소퍼자이티스","식도염","esophag=식도|itis=염증","역류성 식도염 = reflux esophagitis"]
+]},
+{id:"ms",stage:"1학년",name:"뼈 월드",tag:"뼈",color:"#C08CFF",desc:"근골격계",items:[
+["arthritis","아쓰라이티스","관절염","arthr=관절|itis=염증",""],
+["arthralgia","아쓰랠지아","관절통","arthr=관절|algia=통증",""],
+["osteoporosis","오스티오포로시스","골다공증","oste=뼈|o|por=구멍|osis=상태","폐경 후 여성에게 흔해요"],
+["osteomyelitis","오스티오마이얼라이티스","골수염","oste=뼈|o|myel=골수|itis=염증",""],
+["osteoarthritis (OA)","오스티오아쓰라이티스","골관절염 (퇴행성 관절염)","oste=뼈|o|arthr=관절|itis=염증",""],
+["rheumatoid arthritis (RA)","루머토이드 아쓰라이티스","류마티스 관절염","rheumat=류마티스|oid=~모양|arthritis=관절염",""],
+["fracture (Fx)","프랙처","골절","fract=부러짐|ure","차트에는 Fx"],
+["myalgia","마이앨지아","근육통","my=근육|algia=통증",""],
+["tendinitis","텐더나이티스","건염 (힘줄 염증)","tendin=힘줄|itis=염증",""],
+["sprain","스프레인","염좌 (삠)","sprain=삐다","발목 삠 = ankle sprain"],
+["dislocation","디스로케이션","탈구 (관절이 빠짐)","dis=떨어짐|locat=자리|ion",""],
+["scoliosis","스콜리오시스","척추측만증","scoli=굽은|osis=상태",""],
+["gout","가우트","통풍","gout=방울","엄지발가락 관절에 흔해요"],
+["amputation","앰퓨테이션","절단술","amput=잘라냄|ation=행위",""],
+["cast","캐스트","석고붕대 (깁스)","cast=틀","'깁스'는 독일어 Gips에서 온 말"],
+["traction","트랙션","견인","tract=끌다|ion=행위",""],
+["flexion","플렉션","굴곡 (굽히기)","flex=굽히다|ion=행위",""],
+["extension","익스텐션","신전 (펴기)","ex=밖|tens=늘이다|ion=행위",""],
+["range of motion (ROM)","레인지 오브 모션","관절가동범위","range=범위|motion=움직임","ROM 운동 = 관절 운동"],
+["vertebra","버터브러","척추뼈","vertebr=척추|a","여러 개면 vertebrae"],
+["femur","피머","대퇴골 (넙다리뼈)","femur=넓적다리","몸에서 가장 긴 뼈"],
+["crutches","크러치스","목발","crutch=목발|es",""],
+["arthroscopy","아쓰로스커피","관절경 검사","arthr=관절|o|scopy=보는 검사",""],
+["atrophy","애트로피","위축","a=없음|trophy=영양","안 쓰면 근육이 줄어요"],
+["ambulation","앰뷸레이션","보행 (걷기)","ambul=걷다|ation=행위","수술 후 조기 보행 = early ambulation"]
+]}
+];
+
+/* ===================== 기본 세팅 ===================== */
+const ALL=[];WORLDS.forEach((w,wi)=>w.items.forEach(a=>ALL.push({t:a[0],p:a[1],m:a[2],d:a[3],e:a[4],s:a[5],w:wi})));
+const BY={};ALL.forEach(x=>BY[x.t]=x);
+const IV=[1,1,3,7,14,30,60];          // 상자별 다음 복습까지 일수
+const MASTER=4;                       // 상자 4 이상 = 익힌 단어 (7일 복습 통과)
+const MILES=[10,50,100,150,200,300,400,500,700,1000,1400];
+const KEY="medquest.v1";
+const BOSSES=["인플루엔자 대왕","박테리아 군단장","혈전 골렘","콜레스테롤 슬라임","바이러스 킹","염증 드래곤"];
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function today(){const d=new Date();return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5)}
+const isWord=x=>x.w>=3;
+
+let storageOK=true;
+function fresh(){return{v:1,daily:1,sound:true,words:{},xp:0,streak:0,lastDone:null,day:{n:today(),newDone:0,revDone:0,done:false},boss:{},badges:[],lastBackup:null,start:today()}}
+function load(){try{const r=localStorage.getItem(KEY);if(r){return Object.assign(fresh(),JSON.parse(r))}}catch(e){storageOK=false}return fresh()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){storageOK=false}}
+let S=load();
+function ensureDay(){if(!S.day||S.day.n!==today())S.day={n:today(),newDone:0,revDone:0,done:false}}
+
+const learned=()=>Object.keys(S.words).length;
+const mastered=()=>Object.values(S.words).filter(w=>w.b>=MASTER).length;
+const streakNow=()=>S.lastDone!=null&&S.lastDone>=today()-1?S.streak:0;
+function nextNew(n){const r=[];for(const x of ALL){if(r.length>=n)break;if(!S.words[x.t])r.push(x)}return r}
+function dueList(){const t=today();return Object.entries(S.words).filter(([k,w])=>w.due<=t&&BY[k]).sort((a,b)=>a[1].due-b[1].due).slice(0,20).map(([k])=>BY[k])}
+function lvlOf(xp){let L=1;while(xp>=50*L*(L+1))L++;return L}
+function lvlProg(xp){const L=lvlOf(xp),lo=L>1?50*(L-1)*L:0,hi=50*L*(L+1);return{L,pct:Math.round((xp-lo)/(hi-lo)*100),need:hi-xp}}
+
+/* ===================== 소리 · 발음 · 효과 ===================== */
+let AC=null;
+function tone(seq){if(!S.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t0=AC.currentTime;seq.forEach(([f,st,du,type])=>{const o=AC.createOscillator(),g=AC.createGain();o.type=type||"triangle";o.frequency.value=f;g.gain.setValueAtTime(.0001,t0+st);g.gain.exponentialRampToValueAtTime(.18,t0+st+.01);g.gain.exponentialRampToValueAtTime(.0001,t0+st+du);o.connect(g).connect(AC.destination);o.start(t0+st);o.stop(t0+st+du+.02)})}catch(e){}}
+const sfx={
+  ok:()=>tone([[660,0,.12],[990,.08,.18]]),
+  bad:()=>tone([[180,0,.25,"sawtooth"],[140,.1,.25,"sawtooth"]]),
+  flip:()=>tone([[520,0,.08]]),
+  up:()=>tone([[523,0,.14],[659,.1,.14],[784,.2,.14],[1047,.3,.3]]),
+  hit:()=>tone([[300,0,.08,"square"],[120,.05,.2,"square"]])
+};
+function readText(x){if(x.s)return x.s;return x.t.replace(/\(.*?\)/g,"").split("·").map(s=>s.replace(/[\/\-]/g,"").trim()).join(", ")}
+function speak(text){try{const u=new SpeechSynthesisUtterance(text);u.lang="en-US";u.rate=.8;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){toast("이 기기에서는 발음 듣기가 안 돼요")}}
+const SPK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>';
+const HEART='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg>';
+
+function toast(msg,ms=1800){const d=document.createElement("div");d.className="toast";d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),ms)}
+function flash(color){const d=document.createElement("div");d.className="flash";d.style.background=color;document.body.appendChild(d);setTimeout(()=>d.remove(),450)}
+const RM=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function confetti(){if(RM)return;const c=$("#fx"),g=c.getContext("2d"),W=c.width=innerWidth*devicePixelRatio,H=c.height=innerHeight*devicePixelRatio;c.style.width=innerWidth+"px";c.style.height=innerHeight+"px";const cols=["#33E1F2","#FF4F8B","#FFC857","#3EE58A","#C08CFF"];const P=Array.from({length:140},()=>({x:W/2,y:H*.35,vx:(Math.random()-.5)*W*.03,vy:-Math.random()*H*.025-H*.005,r:(4+Math.random()*6)*devicePixelRatio,c:cols[Math.random()*5|0],a:Math.random()*6,va:(Math.random()-.5)*.4}));let f=0;(function tick(){g.clearRect(0,0,W,H);P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=H*.0009;p.a+=p.va;g.save();g.translate(p.x,p.y);g.rotate(p.a);g.fillStyle=p.c;g.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);g.restore()});if(++f<110)requestAnimationFrame(tick);else g.clearRect(0,0,W,H)})()}
+
+/* ===================== 홈 ===================== */
+let tab="home";
+function render(){ensureDay();document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===tab?"page":"false"));({home:renderHome,map:renderMap,set:renderSet})[tab]()}
+
+function ecg(){return '<svg class="ecg" viewBox="0 0 400 44" preserveAspectRatio="none" aria-hidden="true"><path d="M0 26h70l8-6 8 6h30l6 4 8-26 9 38 7-16h30l10-7 12 7h80l8-6 8 6h30l6 4 8-26 9 38 7-16h40"/></svg>'}
+
+function bossInfo(){const d=new Date().getDay(),wk=today()-((d+6)%7);return{open:d===0||d===6,wk,enough:learned()>=5,res:S.boss[wk],name:BOSSES[wk%BOSSES.length]}}
+function virus(size,color){return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true"><g stroke="${color}" stroke-width="5" stroke-linecap="round">${Array.from({length:10},(_,i)=>{const a=i*Math.PI/5,x1=50+Math.cos(a)*30,y1=50+Math.sin(a)*30,x2=50+Math.cos(a)*44,y2=50+Math.sin(a)*44;return`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><circle cx="${x2}" cy="${y2}" r="4" fill="${color}"/>`}).join("")}</g><circle cx="50" cy="50" r="31" fill="${color}"/><circle cx="40" cy="45" r="6" fill="#0A0F24"/><circle cx="60" cy="45" r="6" fill="#0A0F24"/><circle cx="42" cy="43" r="2" fill="#fff"/><circle cx="62" cy="43" r="2" fill="#fff"/><path d="M38 62q12-8 24 0" stroke="#0A0F24" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M33 36l12 5M67 36l-12 5" stroke="#0A0F24" stroke-width="4" stroke-linecap="round"/></svg>`}
+
+function renderHome(){
+  const lp=lvlProg(S.xp),st=streakNow(),nN=Math.min(Math.max(0,S.daily-S.day.newDone),nextNew(99).length),due=dueList().length;
+  const L=learned(),M=mastered(),nextM=MILES.find(m=>m>L),bi=bossInfo();
+  const needBackup=storageOK&&L>=10&&(S.lastBackup==null||today()-S.lastBackup>=7);
+  const curW=WORLDS[(nextNew(1)[0]||ALL[ALL.length-1]).w];
+  let bossState=!bi.enough?'<span class="pill">단어 5개 배우면 등장</span>':bi.res&&bi.res.won?'<span class="pill ok">이번 주 처치 완료</span>':bi.open?'<span class="pill on">지금 도전 가능</span>':`<span class="pill">토·일 출현 · ${((6-new Date().getDay()+7)%7)||7}일 남음</span>`;
+  $("#app").innerHTML=`
+  <div class="top"><h1>의학용어 <span>퀘스트</span></h1><div class="lvl"><b class="num">${lp.L}</b><span class="num" style="font-size:13px">${S.xp.toLocaleString()} XP</span></div></div>
+  ${ecg()}
+  ${!storageOK?'<div class="banner">이 브라우저에서는 기록 저장이 막혀 있어요. 사파리에서 링크를 열어주세요.</div>':""}
+  ${needBackup?'<div class="banner"><span>일주일이 지났어요. 진도를 백업해 두세요.</span><button id="goBackup">백업하기</button></div>':""}
+  <div class="rx">
+    <div class="rxmark">Rx</div>
+    <div><div class="label">오늘의 처방 · ${esc(curW.name)}</div><h2>${S.day.done?"오늘 처방 완료!":"승현, 오늘 분량이야"}</h2></div>
+    <div class="lines">
+      <div class="ln"><span>새 단어</span><b class="num">${S.day.done?S.day.newDone:nN}개</b></div>
+      <div class="ln"><span>복습할 단어</span><b class="num">${due}개</b></div>
+    </div>
+    ${S.day.done?'<span class="done-stamp">DONE</span>':""}
+    ${S.day.done
+      ?(due?`<button class="big" id="go">남은 복습 ${due}개 하기</button>`:"")+(nextNew(1).length?`<button class="big alt" id="bonus">보너스 라운드 (+${S.daily}단어)</button>`:"")
+      :(nN||due?`<button class="big" id="go">시작하기</button>`:'<p class="muted" style="margin:0">모든 단어를 다 배웠어요. 새 월드가 곧 추가돼요!</p>')}
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="v flame num">${st}</span><span class="k">연속 일수</span></div>
+    <div class="stat"><span class="v num">${M}</span><span class="k">익힌 단어</span></div>
+    <div class="stat"><span class="v num">${L}<small class="muted" style="font-size:13px">/${ALL.length}</small></span><span class="k">배운 단어</span></div>
+  </div>
+  <div class="card"><div class="row"><div><div class="label">레벨 ${lp.L}</div><div class="xpbar" style="margin-top:6px"><i style="width:${lp.pct}%"></i></div></div><span class="muted num" style="font-size:13px">다음 레벨까지 ${lp.need} XP</span></div></div>
+  <div class="card bosscard">${virus(64,"#FF4F8B")}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><div class="label">주말 보스전</div><h3 style="font-size:19px">${esc(bi.name)}</h3>${bossState}</div></div>
+  ${bi.enough&&bi.open&&!(bi.res&&bi.res.won)?'<button class="big pink" id="boss">보스전 시작</button>':""}
+  <div class="card"><div class="row"><div><div class="label">마일스톤</div><div style="font-size:14px;margin-top:2px">${nextM?`다음 배지까지 <b class="num">${nextM-L}</b>단어`:"모든 배지 획득!"}</div></div></div>
+  <div class="badges">${MILES.filter(m=>m<=ALL.length||m===MILES.find(x=>x>ALL.length)).slice(0,8).map(m=>`<div class="badge ${L>=m?"got":""}">${m}</div>`).join("")}</div></div>`;
+  const on=(id,f)=>{const e=$("#"+id);if(e)e.onclick=f};
+  on("go",()=>startSession(false));on("bonus",()=>startSession(true));on("boss",startBoss);on("goBackup",()=>{tab="set";render();setTimeout(()=>$("#bk")&&$("#bk").scrollIntoView({behavior:"smooth"}),50)});
+}
+
+/* ===================== 학습 세션 ===================== */
+let sess=null;
+function typeFor(x){const b=(S.words[x.t]||{b:0}).b;if(!isWord(x))return b>=2?"term":"meaning";return b<=1?"meaning":b===2?"term":"spell"}
+function openOv(){$("#ov").hidden=false;$("#ov").scrollTop=0;document.body.style.overflow="hidden"}
+function closeOv(){$("#ov").hidden=true;document.body.style.overflow="";render()}
+
+function startSession(bonus){
+  ensureDay();
+  const n=bonus?S.daily:Math.max(0,S.daily-S.day.newDone);
+  const news=nextNew(n),due=dueList();
+  if(!news.length&&!due.length){toast("오늘은 할 게 없어요. 푹 쉬어!");return}
+  const q=[];news.forEach(x=>{q.push({k:"learn",t:x.t});q.push({k:"q",t:x.t,type:"meaning",isNew:true})});
+  shuffle(due).forEach(x=>q.push({k:"q",t:x.t,type:typeFor(x)}));
+  sess={q,i:0,combo:0,max:0,right:0,total:0,xp:0,firsts:new Set(),retried:new Set(),L0:learned(),lv0:lvlOf(S.xp),newCount:news.length};
+  openOv();step();
+}
+function head(){const pct=Math.round(sess.i/sess.q.length*100);return`<div class="ov-top"><button class="x" id="quit" aria-label="그만하기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div class="prog"><i style="width:${pct}%"></i></div><div class="combo num" id="combo">${sess.combo>1?"x"+sess.combo:""}</div></div>`}
+
+function partsHTML(d){return'<div class="parts">'+d.split("|").map((p,i,a)=>{const [k,v]=p.split("=");const plus=i<a.length-1?'<span class="plus">+</span>':"";return(v?`<span class="chip c${i%4}"><b>${esc(k)}</b><small>${esc(v)}</small></span>`:`<span class="chip join"><b class="muted">${esc(k)}</b></span>`)+plus}).join("")+"</div>"}
+function exHTML(x){if(!x.e)return"";const m=x.e.match(/^([a-z][a-z\-]*)\s/);return`<div class="ex">${m?`<button class="spk sm" data-say="${esc(m[1])}" aria-label="예시 발음 듣기">${SPK}</button>`:""}<div><div class="label">${isWord(x)?"현장 한마디":"이렇게 쓰여요"}</div><div style="font-size:15px">${esc(x.e)}</div></div></div>`}
+function bindSay(root){root.querySelectorAll("[data-say]").forEach(b=>b.onclick=()=>speak(b.dataset.say))}
+
+function step(){
+  if(sess.i>=sess.q.length)return finish();
+  const it=sess.q[sess.i],x=BY[it.t],host=$("#ovin");
+  if(it.k==="learn"){
+    sfx.flip();
+    host.innerHTML=head()+`<div class="learn">
+      <span class="newtag">NEW · ${isWord(x)?"단어":"조각"}</span>
+      <div class="bigterm term">${esc(x.t)}</div>
+      <div class="pron"><button class="spk" data-say="${esc(readText(x))}" aria-label="발음 듣기">${SPK}</button><span>${esc(x.p)}</span></div>
+      <div class="meaning">${esc(x.m)}</div>
+      <div><div class="label" style="margin-bottom:6px">조각 분해</div>${partsHTML(x.d)}</div>
+      ${exHTML(x)}
+    </div>
+    <button class="big" id="next">외웠어! 문제 풀기</button>`;
+    bindSay(host);setTimeout(()=>speak(readText(x)),350);
+    $("#next").onclick=()=>{sess.i++;step()};
+  }else{
+    host.innerHTML=head()+'<div id="qh"></div>';
+    ask($("#qh"),x,it.type,ok=>onAnswer(it,ok),()=>{sess.i++;step()});
+  }
+  $("#quit").onclick=()=>finish(true);
+}
+
+function opts(x,field){const pool=shuffle(ALL.filter(y=>y.t!==x.t&&y[field]!==x[field]&&(y.w===x.w||Math.abs(y.w-x.w)<=1)));const seen=new Set([x[field]]),r=[x];for(const y of pool){if(r.length>=4)break;if(!seen.has(y[field])){seen.add(y[field]);r.push(y)}}return shuffle(r)}
+function norm(s){return s.toLowerCase().replace(/[^a-z0-9]/g,"")}
+
+function ask(host,x,type,onAns,onNext){
+  let html="";
+  if(type==="meaning"){
+    html=`<div class="qprompt"><span class="qtype">이 ${isWord(x)?"단어":"조각"}의 뜻은?</span><div class="bigterm term">${esc(x.t)}</div><div class="pron"><button class="spk sm" data-say="${esc(readText(x))}" aria-label="발음 듣기">${SPK}</button><span style="font-size:15px">${esc(x.p)}</span></div></div><div class="opts">${opts(x,"m").map(y=>`<button class="opt" data-v="${esc(y.t)}">${esc(y.m)}</button>`).join("")}</div>`;
+  }else if(type==="term"){
+    html=`<div class="qprompt"><span class="qtype">이 뜻의 영어는?</span><div class="meaning" style="font-size:24px">${esc(x.m)}</div></div><div class="opts">${opts(x,"t").map(y=>`<button class="opt term" data-v="${esc(y.t)}">${esc(y.t)}</button>`).join("")}</div>`;
+  }else{
+    html=`<div class="qprompt"><span class="qtype">철자를 써봐 (대소문자 상관없음)</span><div class="meaning" style="font-size:24px">${esc(x.m)}</div><div class="pron"><button class="spk sm" data-say="${esc(readText(x))}" aria-label="발음 듣기">${SPK}</button><span style="font-size:15px">${esc(x.p)}</span></div></div><form class="spell" id="sf"><input id="sp" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="영어로 입력"><button class="btn" style="background:var(--cyan);color:#06122A">확인</button></form>`;
+  }
+  host.innerHTML=`<div class="qbox">${html}<div id="fb"></div></div>`;bindSay(host);
+  const feedback=ok=>{
+    onAns(ok);
+    const fb=host.querySelector("#fb");
+    if(ok){fb.innerHTML=`<div class="fb good"><b>정답!</b><span class="term" style="font-size:17px">${esc(x.t)} = ${esc(x.m)}</span></div>`;setTimeout(onNext,isWord(x)&&type==="spell"?900:700)}
+    else{fb.innerHTML=`<div class="fb bad"><b>아깝다! 정답은</b><div class="term" style="font-size:20px">${esc(x.t)}</div><div>${esc(x.p)} · ${esc(x.m)}</div>${partsHTML(x.d)}</div><button class="big alt" id="nx" style="margin-top:12px">다음</button>`;fb.querySelector("#nx").onclick=onNext;fb.scrollIntoView({behavior:RM?"auto":"smooth",block:"nearest"})}
+  };
+  if(type==="spell"){
+    const inp=host.querySelector("#sp");setTimeout(()=>inp.focus(),100);
+    host.querySelector("#sf").onsubmit=e=>{e.preventDefault();if(!inp.value.trim()||inp.disabled)return;const v=norm(inp.value),main=norm(x.t.replace(/\(.*?\)/g,"")),ab=(x.t.match(/\((.*?)\)/)||[])[1];const ok=v===main||(ab&&v===norm(ab));inp.disabled=true;inp.classList.add(ok?"right":"wrong");feedback(ok)};
+  }else{
+    host.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{const ok=b.dataset.v===x.t;host.querySelectorAll(".opt").forEach(o=>{o.disabled=true;if(o.dataset.v===x.t)o.classList.add("right")});if(!ok)b.classList.add("wrong");feedback(ok)});
+  }
+}
+
+function addXP(g){const before=lvlOf(S.xp);S.xp+=g;if(sess)sess.xp+=g;if(lvlOf(S.xp)>before){setTimeout(()=>{sfx.up();confetti();toast("레벨 업! Lv."+lvlOf(S.xp))},250)}}
+function onAnswer(it,ok){
+  const first=!sess.firsts.has(it.t);sess.total++;
+  if(first){sess.firsts.add(it.t);
+    let w=S.words[it.t];if(!w){w=S.words[it.t]={b:0,due:today(),c:0,w:0,f:today()};S.day.newDone++}else S.day.revDone++;
+    const prev=w.b;if(ok){w.c++;w.b=Math.min(w.b+1,6)}else{w.w++;w.b=0}w.due=today()+IV[w.b];
+    if(prev<MASTER&&w.b>=MASTER)setTimeout(()=>toast("마스터! "+it.t),900);
+  }
+  const c=$("#combo");
+  if(ok){sess.right++;sess.combo++;sess.max=Math.max(sess.max,sess.combo);sfx.ok();flash("var(--good)");addXP(10+Math.min(sess.combo-1,10)*2);if(c){c.textContent=sess.combo>1?"x"+sess.combo:"";c.classList.remove("pop");void c.offsetWidth;c.classList.add("pop")}}
+  else{sess.combo=0;sfx.bad();flash("var(--bad)");if(c)c.textContent="";if(!sess.retried.has(it.t)){sess.retried.add(it.t);sess.q.push({k:"q",t:it.t,type:"meaning"})}}
+  save();
+}
+
+function markDayDone(){
+  if(S.day.done)return false;
+  if(S.day.newDone>0||nextNew(1).length===0){S.day.done=true;const t=today();S.streak=S.lastDone===t-1?S.streak+1:(S.lastDone===t?S.streak:1);S.lastDone=t;addXP(20);return true}
+  return false;
+}
+function finish(quit){
+  const newly=markDayDone();
+  const L=learned(),got=MILES.filter(m=>m>sess.L0&&m<=L);got.forEach(m=>{if(!S.badges.includes(m))S.badges.push(m)});save();
+  if(quit&&sess.total===0){sess=null;closeOv();return}
+  const rate=sess.total?Math.round(sess.right/sess.total*100):0;
+  $("#ovin").innerHTML=`<div class="result">
+    <div class="label">${newly?"오늘의 처방 완료":"라운드 종료"}</div>
+    <h2>${rate>=90?"완벽해!":rate>=70?"잘했어!":"내일 또 보자!"}</h2>
+    ${newly?`<div style="font-family:var(--f-term);font-weight:800;font-size:44px;color:var(--gold)" class="num">${S.streak}일</div><div class="muted">연속 학습 중</div>`:""}
+    <div class="rgrid"><div class="stat"><span class="v num">${rate}%</span><span class="k">정답률</span></div><div class="stat"><span class="v num">x${sess.max}</span><span class="k">최대 콤보</span></div><div class="stat"><span class="v num" style="color:var(--gold)">+${sess.xp}</span><span class="k">XP</span></div></div>
+    ${got.length?`<div class="card" style="width:100%;align-items:center"><div class="badge got" style="width:72px;height:72px;font-size:22px">${got[got.length-1]}</div><b>${got[got.length-1]}단어 배지 획득!</b><span class="muted" style="font-size:13px">아빠한테 보여주고 보상 받기</span></div>`:""}
+    <button class="big" id="home" style="margin-top:8px">홈으로</button></div>`;
+  if(newly||got.length){sfx.up();confetti()}
+  $("#home").onclick=()=>{sess=null;closeOv()};
+}
+
+/* ===================== 보스전 ===================== */
+let boss=null;
+function startBoss(){
+  const bi=bossInfo(),seen=Object.entries(S.words).map(([k,w])=>({x:BY[k],w})).filter(o=>o.x);
+  const recent=shuffle(seen.filter(o=>o.w.f>=bi.wk-7)),rest=shuffle(seen.filter(o=>o.w.f<bi.wk-7));
+  const picks=recent.concat(rest).slice(0,10).map(o=>o.x);
+  const qs=picks.map(x=>({x,type:shuffle(isWord(x)?["meaning","term","spell"]:["meaning","term"])[0]}));
+  boss={qs,i:0,hp:qs.length,max:qs.length,hearts:3,name:bi.name,wk:bi.wk};
+  openOv();bossStep();
+}
+function bossStep(dmg){
+  const b=boss,host=$("#ovin");
+  if(b.hp<=0||b.hearts<=0||b.i>=b.qs.length)return bossEnd();
+  host.innerHTML=`<div class="ov-top"><button class="x" id="quit" aria-label="도망가기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div style="flex:1"></div><div class="hearts">${[0,1,2].map(i=>`<span class="${i<b.hearts?"":"lost"}">${HEART}</span>`).join("")}</div></div>
+  <div class="arena"><div class="bossname">${esc(b.name)}</div><div class="hp"><i style="width:${b.hp/b.max*100}%"></i></div><div class="bossart ${dmg?"hit":""}" id="ba">${virus(120,"#FF4F8B")}</div>${dmg?'<div class="dmg">-1</div>':""}<span class="muted num" style="font-size:13px">HP ${b.hp}/${b.max}</span></div><div id="qh"></div>`;
+  $("#quit").onclick=()=>{boss=null;closeOv()};
+  const it=b.qs[b.i];
+  ask($("#qh"),it.x,it.type,ok=>{if(ok){b.hp--;sfx.hit()}else{b.hearts--;sfx.bad();flash("var(--bad)")}it.ok=ok},()=>{b.i++;bossStep(it.ok)});
+}
+function bossEnd(){
+  const b=boss,won=b.hp<=0;
+  if(won){S.boss[b.wk]={won:true,hearts:b.hearts};addXP(100+b.hearts*20);save()}
+  $("#ovin").innerHTML=`<div class="result"><div style="opacity:${won?.3:1};filter:${won?"grayscale(1)":"none"}">${virus(110,"#FF4F8B")}</div>
+  <div class="label">주말 보스전</div><h2>${won?"보스 처치!":"보스가 도망쳤다..."}</h2>
+  <p class="muted" style="margin:0">${won?`+${100+b.hearts*20} XP · 남은 하트 ${b.hearts}개`:"틀린 단어를 복습하고 다시 도전해봐. 이번 주말 안에 몇 번이든 가능!"}</p>
+  <button class="big" id="home">홈으로</button></div>`;
+  if(won){sfx.up();confetti()}
+  $("#home").onclick=()=>{boss=null;closeOv()};
+}
+
+/* ===================== 월드맵 ===================== */
+function renderMap(){
+  const cur=(nextNew(1)[0]||{w:WORLDS.length-1}).w;let stage="";
+  $("#app").innerHTML=`<div class="top"><h1>월드맵</h1></div><p class="muted" style="margin:0">워밍업에서 조각을 모으고, 1학년 월드에서 진짜 단어를 깨요.</p>`+
+  WORLDS.map((w,wi)=>{const tot=w.items.length,seen=w.items.filter(a=>S.words[a[0]]).length,mas=w.items.filter(a=>(S.words[a[0]]||{}).b>=MASTER).length,locked=wi>cur;
+    const h=w.stage!==stage?`<div class="label stage-h">${esc(stage=w.stage)}</div>`:"";
+    return h+`<button class="world ${locked?"locked":""} ${wi===cur?"current":""}" data-w="${wi}"><span class="orb" style="background:${w.color}">${esc(w.tag)}</span><div style="flex:1;min-width:0"><div class="row" style="gap:8px"><b style="font-size:16px">${esc(w.name)}</b>${wi===cur?'<span class="pill on">진행 중</span>':locked?'<span class="pill">잠김</span>':seen===tot?'<span class="pill ok">클리어</span>':""}</div><div class="muted" style="font-size:13px">${esc(w.desc)} · 배운 ${seen}/${tot} · 익힌 ${mas}</div><div class="bar"><i style="width:${seen/tot*100}%;background:${w.color}"></i></div></div></button>`}).join("")+
+  `<div class="card"><div class="label">다음 업데이트</div><span class="muted" style="font-size:14px">신경 · 비뇨 · 내분비 · 생식 · 피부 월드, 2학년 질환 · 약리, 3학년 처방 약어, 4학년 국시 대비</span></div>`;
+  document.querySelectorAll(".world").forEach(b=>b.onclick=()=>{const wi=+b.dataset.w;if(wi>cur){toast("앞 월드를 먼저 진행해야 열려요");return}openWorld(wi)});
+}
+function openWorld(wi){
+  const w=WORLDS[wi];openOv();
+  $("#ovin").innerHTML=`<div class="ov-top"><button class="x" id="back" aria-label="닫기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><h2 style="font-size:22px">${esc(w.name)}</h2></div>
+  <p class="muted" style="margin:0;font-size:13px">점 5개가 다 차면 완전히 익힌 단어예요. 배운 단어를 누르면 발음이 나와요.</p>
+  <div class="wlist">${w.items.map(a=>{const s=S.words[a[0]],x=BY[a[0]];if(!s)return`<div class="witem"><span class="term muted">???</span><span class="muted" style="font-size:13px">아직 안 배움</span></div>`;const f=Math.min(s.b,5);return`<button class="witem" data-say="${esc(readText(x))}" style="width:100%;text-align:left"><div style="min-width:0"><div class="term">${esc(a[0])}</div><div class="muted" style="font-size:13px">${esc(a[1])} · ${esc(a[2])}</div></div><div class="dots" aria-label="숙련도 ${f}/5">${[1,2,3,4,5].map(i=>`<i class="${i<=f?"f":""}"></i>`).join("")}</div></button>`}).join("")}</div>`;
+  bindSay($("#ovin"));$("#back").onclick=closeOv;
+}
+
+/* ===================== 설정 ===================== */
+let resetArm=false;
+function code(){return btoa(unescape(encodeURIComponent(JSON.stringify(S))))}
+function renderSet(){
+  $("#app").innerHTML=`<div class="top"><h1>설정</h1></div>
+  <div class="card"><div class="label">하루 새 단어 수</div><div class="seg">${[1,2,3,5].map(n=>`<button aria-pressed="${S.daily===n}" data-n="${n}">${n}</button>`).join("")}</div><span class="muted" style="font-size:13px">복습은 따로 나와요. 처음 2주는 1개로 습관부터 잡는 걸 추천!</span></div>
+  <div class="card"><div class="row"><div><b>효과음</b><div class="muted" style="font-size:13px">정답 · 콤보 · 레벨업 소리</div></div><button class="toggle" id="snd" aria-pressed="${S.sound}" aria-label="효과음"></button></div></div>
+  <div class="card" id="bk"><div class="label">진도 백업</div><span style="font-size:14px">아래 코드를 복사해서 메모 앱에 붙여두세요. 폰을 바꾸면 '복원'에 붙여넣으면 돼요.</span><textarea id="bkc" readonly>${code()}</textarea><button class="btn" id="cp">코드 복사</button>
+  <div class="label" style="margin-top:8px">복원</div><textarea id="rs" placeholder="백업 코드를 붙여넣으세요"></textarea><button class="btn" id="rsb">복원하기</button></div>
+  <div class="card"><div class="label">홈 화면에 앱으로 추가</div><b style="font-size:14px">아이폰 (사파리)</b><ol class="how"><li>아래쪽 <b>공유 버튼</b>(네모에 화살표) 누르기</li><li><b>홈 화면에 추가</b> 선택</li></ol><b style="font-size:14px">안드로이드 (크롬)</b><ol class="how"><li>오른쪽 위 <b>⋮</b> 누르기</li><li><b>홈 화면에 추가</b> 또는 <b>앱 설치</b> 선택</li></ol><span class="muted" style="font-size:13px">아이폰은 홈 화면 아이콘과 사파리의 기록이 따로 저장돼요. 추가한 뒤에는 꼭 아이콘으로만 여세요.</span></div>
+  <div class="card"><div class="label">초기화</div><button class="btn warn" id="rst">${resetArm?"정말 지울까요? 한 번 더 누르면 전부 삭제":"모든 기록 지우기"}</button></div>
+  <p class="muted" style="font-size:12px;margin:0">단어 ${ALL.length}개 · 기록은 이 폰에만 저장돼요</p>`;
+  document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{S.daily=+b.dataset.n;save();renderSet();toast(`하루 새 단어 ${S.daily}개로 바꿨어요`)});
+  $("#snd").onclick=()=>{S.sound=!S.sound;save();renderSet()};
+  $("#cp").onclick=async()=>{const t=$("#bkc");try{await navigator.clipboard.writeText(t.value);toast("복사했어요. 메모 앱에 붙여두세요")}catch(e){t.focus();t.select();toast("코드를 길게 눌러 복사하세요")}S.lastBackup=today();save()};
+  $("#rsb").onclick=()=>{try{const o=JSON.parse(decodeURIComponent(escape(atob($("#rs").value.trim()))));if(!o||typeof o.words!=="object")throw 0;S=Object.assign(fresh(),o);S.lastBackup=today();save();toast("복원 완료! 배운 단어 "+learned()+"개");tab="home";render()}catch(e){toast("코드가 올바르지 않아요. 전체를 빠짐없이 붙여넣었는지 확인하세요",2600)}};
+  $("#rst").onclick=()=>{if(!resetArm){resetArm=true;renderSet();setTimeout(()=>{resetArm=false;if(tab==="set")renderSet()},4000);return}resetArm=false;S=fresh();save();toast("초기화했어요");tab="home";render()};
+}
+
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();scrollTo(0,0)});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&$("#ov").hidden)render()});
+render();
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+</script>
+</body>
+</html>
