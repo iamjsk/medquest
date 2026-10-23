@@ -1,5 +1,5 @@
 // 오프라인 지원: 앱 파일은 먼저 네트워크에서 새 버전을 받고, 안 되면 저장본을 씀
-const CACHE = "medquest-v2";
+const CACHE = "medquest-v3";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
